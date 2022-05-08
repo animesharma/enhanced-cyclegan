@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     # MultiGPU support
     if device == "cuda":
-        gpu_count = torch.cuda.device_count()
+        gpu_count = min(opt.n_gpu, torch.cuda.device_count())
         if  gpu_count > 1:
             netG_A2B = torch.nn.DataParallel(netG_A2B, list(range(gpu_count)))
             netG_B2A = torch.nn.DataParallel(netG_B2A, list(range(gpu_count)))
@@ -193,15 +193,6 @@ if __name__ == "__main__":
         batch_size=opt.batchSize,
         shuffle=True,
         num_workers=opt.n_cpu)
-    #testdataloader = DataLoader(
-    #    ImageDataset(
-    #        opt.dataroot,
-    #        transforms_=transforms_,
-    #        unaligned=True,
-    #        mode='test'),
-    #    batch_size=opt.batchSize,
-    #    shuffle=True,
-    #    num_workers=opt.n_cpu)
 
     ##############################################
     loss_dict = {}
@@ -376,7 +367,7 @@ if __name__ == "__main__":
             optimizer_netDg_B.step()
             ###################################
             
-            print("epoch: ", epoch, " i: ", i)
+            print("Epoch: {}\tBatch: {} / {}".format(epoch + 1, i + 1, len(dataloader)))
             loss_G_identity = net_identity_loss_A + net_identity_loss_B
             loss_G_GAN = (loss_GAN_A2B + loss_GAN_B2A)
             loss_G_cycle = net_cycle_loss_ABA + net_cycle_loss_BAB
