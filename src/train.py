@@ -169,9 +169,9 @@ if __name__ == "__main__":
 
     if os.path.exists(reals_dir):
         shutil.rmtree(reals_dir)
-    os.makedirs(reals_dir)
     if os.path.exists(fakes_dir):
         shutil.rmtree(fakes_dir)
+    os.makedirs(reals_dir)
     os.makedirs(fakes_dir)
 
 
@@ -393,12 +393,14 @@ if __name__ == "__main__":
         lr_scheduler_netDg_B.step()
         idx = 0
 
-        os.makedirs('output/' + str(epoch), exist_ok=True)
-        torch.save(netG_A2B.state_dict(), 'output/' + str(epoch) + '/netG_A2B.pth')
-        torch.save(netG_B2A.state_dict(), 'output/' + str(epoch) + '/netG_B2A.pth')
-        torch.save(netD_A.state_dict(), 'output/' + str(epoch) + '/netD_A.pth')
-        torch.save(netD_B.state_dict(), 'output/' + str(epoch) + '/netD_B.pth')
-        with open('output/' + str(epoch) + '/loss_dict.pickle', 'wb') as handle:
+        os.makedirs('output/' + str(epoch + 1), exist_ok=True)
+        torch.save(netG_A2B.state_dict(), 'output/' + str(epoch + 1) + '/netG_A2B.pth')
+        torch.save(netG_B2A.state_dict(), 'output/' + str(epoch + 1) + '/netG_B2A.pth')
+        torch.save(netD_A.state_dict(), 'output/' + str(epoch + 1) + '/netD_A.pth')
+        torch.save(netD_B.state_dict(), 'output/' + str(epoch + 1) + '/netD_B.pth')
+        torch.save(netDg_A.state_dict(), 'output/' + str(epoch + 1) + '/netDg_A.pth')
+        torch.save(netDg_B.state_dict(), 'output/' + str(epoch + 1) + '/netDg_B.pth')
+        with open('output/' + str(epoch + 1) + '/loss_dict.pickle', 'wb') as handle:
             pickle.dump(loss_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     for i, batch in enumerate(dataloader):
