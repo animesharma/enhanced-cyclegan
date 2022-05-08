@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dataroot',
         type=str,
-        default='/common/home/hu33/Downloads/Karan_cycle/pizza',
+        required=True,
         help='root directory of the dataset')
     parser.add_argument(
         '--lr',
