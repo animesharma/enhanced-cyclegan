@@ -59,9 +59,15 @@ parser.add_argument(
     type=int,
     default=3,
     help='number of channels of the input data')
-parser.add_argument('--output_nc', type=int, default=3,
-                    help='number of channels of the output data')
-parser.add_argument('--cuda', action='store_true', help='use GPU computation')
+parser.add_argument(
+    '--output_nc', 
+    type=int, 
+    default=3,
+    help='number of channels of the output data')
+parser.add_argument(
+    '--cuda',
+    action='store_true', 
+    help='use GPU computation')
 parser.add_argument(
     '--n_cpu',
     type=int,
@@ -70,26 +76,29 @@ parser.add_argument(
 opt = parser.parse_args()
 print(opt)
 
-if torch.cuda.is_available() and not opt.cuda:
-    print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-
 ### definition of Variables #####
 
-device = torch.device("cuda:3")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 netG_A2B = Generator(opt.input_nc, opt.output_nc).to(device)
-netG_A2B = torch.nn.DataParallel(netG_A2B, [3, 4, 5])
 netG_B2A = Generator(opt.output_nc, opt.input_nc).to(device)
-netG_B2A = torch.nn.DataParallel(netG_B2A, [3, 4, 5])
 netD_A = Discriminator(opt.input_nc).to(device)
-netD_A = torch.nn.DataParallel(netD_A, [3, 4, 5])
 netD_B = Discriminator(opt.input_nc).to(device)
-netD_B = torch.nn.DataParallel(netD_B, [3, 4, 5])
 netDg_A = Global_Discriminator().to(device)
-netDg_A = torch.nn.DataParallel(netDg_A, [3, 4, 5])
 netDg_B = Global_Discriminator().to(device)
-netDg_B = torch.nn.DataParallel(netDg_B, [3, 4, 5])
 
+# MultiGPU support
+if device == "cuda":
+    gpu_count = torch.cuda.device_count()
+    if  gpu_count > 1:
+        netG_A2B = torch.nn.DataParallel(netG_A2B, list(range(gpu_count)))
+        netG_B2A = torch.nn.DataParallel(netG_B2A, list(range(gpu_count)))
+        netD_A = torch.nn.DataParallel(netD_A, list(range(gpu_count)))
+        netD_B = torch.nn.DataParallel(netD_B, list(range(gpu_count)))
+        netDg_A = torch.nn.DataParallel(netDg_A, list(range(gpu_count)))
+        netDg_B = torch.nn.DataParallel(netDg_B, list(range(gpu_count)))
+
+# Initialize Weights
 netG_A2B.apply(weights_init_normal)
 netG_B2A.apply(weights_init_normal)
 netD_A.apply(weights_init_normal)
@@ -97,7 +106,7 @@ netD_B.apply(weights_init_normal)
 netDg_A.apply(weights_init_normal)
 netDg_B.apply(weights_init_normal)
 
-# Losses
+# Define Losses
 criterion_GAN = torch.nn.MSELoss()
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
@@ -183,15 +192,15 @@ dataloader = DataLoader(
     batch_size=opt.batchSize,
     shuffle=True,
     num_workers=opt.n_cpu)
-testdataloader = DataLoader(
-    ImageDataset(
-        opt.dataroot,
-        transforms_=transforms_,
-        unaligned=True,
-        mode='test'),
-    batch_size=opt.batchSize,
-    shuffle=True,
-    num_workers=opt.n_cpu)
+#testdataloader = DataLoader(
+#    ImageDataset(
+#        opt.dataroot,
+#        transforms_=transforms_,
+#        unaligned=True,
+#        mode='test'),
+#    batch_size=opt.batchSize,
+#    shuffle=True,
+#    num_workers=opt.n_cpu)
 
 ##############################################
 loss_dict = {}
