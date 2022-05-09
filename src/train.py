@@ -16,6 +16,12 @@ from datasets import ImageDataset
 from utils import weights_init_normal, LambdaLR, ReplayBuffer
 from models import Generator, Discriminator, Global_Discriminator
 
+# FID Parameters
+IDENTITY_LOSS_FID_SCALING_FACTOR = 200
+IDENTITY_LOSS_FID_PROPORTION = 0.5
+CYCLIC_CONSISTENCY_LOSS_FID_SCALING_FACTOR = 100
+CYCLIC_CONSISTENCY_LOSS_FID_PROPORTION = 0.2
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -220,19 +226,19 @@ if __name__ == "__main__":
             for j in range(opt.batchSize):
                 save_image(real_B[j], os.path.join(reals_dir, "real_" + str(j) + ".png"))
                 save_image(same_B[j], os.path.join(fakes_dir, "fake_" + str(j) + ".png"))
-            fid_identity_B = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / 200
+            fid_identity_B = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / IDENTITY_LOSS_FID_SCALING_FACTOR
             # Penalize large FID between G_B2A(B) and A if real A is fed
             for j in range(opt.batchSize):
                 save_image(real_A[j], os.path.join(reals_dir, "real_" + str(j) + ".png"))
                 save_image(same_A[j], os.path.join(fakes_dir, "fake_" + str(j) + ".png"))
                 
-            fid_identity_A = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / 200
+            fid_identity_A = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / IDENTITY_LOSS_FID_SCALING_FACTOR
 
             #print(loss_identity_A, fid_identity_A, loss_identity_B, fid_identity_B, sum([loss_identity_A, fid_identity_A, loss_identity_B, fid_identity_B]))
 
             # Net Identity Loss
-            net_identity_loss_A = loss_identity_A * 0.5 + fid_identity_A * 0.5
-            net_identity_loss_B = loss_identity_B * 0.5 + fid_identity_B * 0.5
+            net_identity_loss_A = loss_identity_A * (1 - IDENTITY_LOSS_FID_PROPORTION) + fid_identity_A * IDENTITY_LOSS_FID_PROPORTION
+            net_identity_loss_B = loss_identity_B * (1 - IDENTITY_LOSS_FID_PROPORTION) + fid_identity_B * IDENTITY_LOSS_FID_PROPORTION
 
             ###################################################
 
@@ -271,18 +277,18 @@ if __name__ == "__main__":
             for j in range(opt.batchSize):
                 save_image(real_A[j], os.path.join(reals_dir, "real_" + str(j) + ".png"))
                 save_image(reconstructed_A[j], os.path.join(fakes_dir, "fake_" + str(j) + ".png"))
-            fid_ABA = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / 100
+            fid_ABA = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / CYCLIC_CONSISTENCY_LOSS_FID_SCALING_FACTOR
             # Penalize large FID between real B and reconstructed B
             for j in range(opt.batchSize):
                 save_image(real_B[j], os.path.join(reals_dir, "real_" + str(j) + ".png"))
                 save_image(reconstructed_B[j], os.path.join(fakes_dir, "fake_" + str(j) + ".png"))      
-            fid_BAB = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / 100
+            fid_BAB = float(calculate_fid_given_paths([reals_dir, fakes_dir], 1, device, dims=2048)) / CYCLIC_CONSISTENCY_LOSS_FID_SCALING_FACTOR
 
             #print(loss_cycle_ABA, fid_ABA, loss_cycle_BAB, fid_BAB, sum([loss_cycle_ABA, fid_ABA, loss_cycle_BAB, fid_BAB]))
 
             # Net Cyclic Consistency Loss
-            net_cycle_loss_ABA = loss_cycle_ABA * 0.8 + fid_ABA * 0.2
-            net_cycle_loss_BAB = loss_cycle_BAB * 0.8 + fid_BAB * 0.2
+            net_cycle_loss_ABA = loss_cycle_ABA * (1 - CYCLIC_CONSISTENCY_LOSS_FID_PROPORTION) + fid_ABA * CYCLIC_CONSISTENCY_LOSS_FID_PROPORTION
+            net_cycle_loss_BAB = loss_cycle_BAB * (1 - CYCLIC_CONSISTENCY_LOSS_FID_PROPORTION) + fid_BAB * CYCLIC_CONSISTENCY_LOSS_FID_PROPORTION
 
             # Total loss
             loss_G = net_identity_loss_A + net_identity_loss_B + net_gan_loss_A2B + net_gan_loss_B2A + net_cycle_loss_ABA + net_cycle_loss_BAB
